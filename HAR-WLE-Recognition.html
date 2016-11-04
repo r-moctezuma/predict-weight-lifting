@@ -126,7 +126,7 @@ $(document).ready(function () {
 <h2>Background</h2>
 <p>This project is one of the assignments I did as part of the Machine Learning course in the Data Science specialization created by the Johns Hopkins University and hosted by Coursera.</p>
 <p>Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In a study conducted in 2013, researchers captured data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information from the study is available at <a href="http://groupware.les.inf.puc-rio.br/har" class="uri">http://groupware.les.inf.puc-rio.br/har</a>.</p>
-<p>The goal of this project is to predict the manner in which they did the exercise.</p>
+<p>The goal of this project is to predict the manner in which they did the exercise. These predictions would allow an app, for example, to monitor an athlete’s performance while they exercise and provide them with real-time feedback regarding whether they are lifting the weight correctly or not. In turn, this will help them fully take advantage of the exercise and avoid potential injuries due to incorrect posture.</p>
 </div>
 <div id="accessing-the-data" class="section level1">
 <h1>Accessing the data</h1>
@@ -255,7 +255,7 @@ sum(validation$classe == predValMany50) / length(predValMany50)</code></pre>
 </div>
 <div id="estimating-out-of-sample-error-with-the-testing-dataset" class="section level2">
 <h2>Estimating out-of-sample error with the ‘Testing’ dataset</h2>
-<p>Finally, since we had used the ‘Validation’ dataset to perform cross-validation and define which model to select, I wanted to measure out-of-sample accuracy on an entirely new dataset: the testing dataset. This resulted in an out-of-sample accuracy of 98.8%, even better than the ‘Validation’ dataset. I believe that this is a good approximation of the out-of-sample accuracy this model will have when presented with entirely new datasets.</p>
+<p>Finally, since we had used the ‘Validation’ dataset to perform cross-validation and define which model to select, I wanted to measure out-of-sample accuracy on an entirely new dataset: the testing dataset. This resulted in an out-of-sample accuracy of 98.8%, even better than the ‘Validation’ dataset. I believe that this is a good approximation of the out-of-sample accuracy this model will have when presented with entirely new datasets. <b>The expected out-of-sample error is therefore 1.2% </b></p>
 <pre class="r"><code>predTesting &lt;- predict(modFitMany50, testing)
 sum(testing$classe == predTesting) / length(predTesting)</code></pre>
 <pre><code>## [1] 0.9878582</code></pre>
