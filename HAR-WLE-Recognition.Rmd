@@ -1,0 +1,151 @@
+---
+title: "Human Activity Recognition - Weight Lifting"
+author: "Roberto Moctezuma"
+date: "11/3/2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Background
+
+This project is one of the assignments I did as part of the Machine Learning course in the Data Science specialization created by the Johns Hopkins University and hosted by Coursera.
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who  take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are  tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify  how well they do it. In a study conducted in 2013, researchers captured data from accelerometers on the belt, forearm, arm, and dumbell  of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information from the study is available at http://groupware.les.inf.puc-rio.br/har.
+
+The goal of this project is to predict the manner in which they did the exercise.
+
+# Accessing the data
+The training data for this project is available [here](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv), and the testing data is available [here](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+
+```{r}
+source_data <- "https://d396qusza40orc.cloudfront.net/predmachlearn/"
+pmltraining <- read.csv(paste(source_data,"pml-training.csv", sep=""), stringsAsFactors = FALSE)
+pmltesting <- read.csv(paste(source_data,"pml-testing.csv", sep=""), stringsAsFactors = FALSE)
+```
+
+## Building the model
+I decided to split the training data into three sections by random subsampling:
+- Training data: to train the predictive models and measure and reduce in-sample error (9619 observations)
+- Validation data: to use a different set of data and measure out-of-sample error of each predictive model (5885 observations)
+- Testing data: to do a final estimate of out-of-sample error in a pristine dataset (4118 observations)
+
+```{r}
+library(caret)
+set.seed(34343)
+inBuild <- createDataPartition(y = pmltraining$classe, p = 0.7, list = FALSE)
+buildData <- pmltraining[inBuild,]
+validation <- pmltraining[-inBuild,]; dim(validation)
+inTrain <- createDataPartition(buildData$classe, p = 0.7, list = FALSE)
+training <- buildData[inTrain,]; dim(training)
+testing <- buildData[-inTrain,]; dim(testing)
+```
+
+## Feature selection and model building
+Since trying to fit prediction models can be very time consuming with many variables, we tried a few variables that seemed good candidates to be predictors. Also, to make compute faster, we explored data of only one subject, "carlitos", and then tested the models with larger datasets.
+
+```{r}
+sub1 <- subset(training, user_name == "carlitos")
+```
+
+We ran different prediction functions on this subset of data, and found that Random Forests was the best suited for a high prediction accuracy.
+
+#### Using a few variables from the 'belt' sensor on one subject
+With this approach we were able to achieve a 99.0% prediction accuracy (in-sample), which was very good. 
+
+```{r}
+modBeltSub <- train(classe ~ roll_belt + pitch_belt + yaw_belt, method = "rf", data = sub1, ntree = 10)
+predBeltSub <- predict(modBeltSub, sub1)
+sum(sub1$classe == predBeltSub) / length(predBeltSub)
+```
+
+#### Using a few variables from the 'arm' sensor on one subject
+For comparison, running the same kind of predictive model (Random Forests with 10 trees) on the 'arm' sensor returns a 98.6% in-sample accuracy.
+
+```{r}
+modArmSub <- train(classe ~ roll_arm + pitch_arm + yaw_arm, method = "rf", data = sub1, ntree = 10)
+predArmSub <- predict(modArmSub, sub1)
+sum(sub1$classe == predArmSub) / length(predArmSub)
+```
+
+#### Using a few variables on the full training dataset
+Given the encouraging results, we moved to train and validate the models on the entire training dataset. The strength of the model held, with an in-sample accuracy of 98.4%:
+
+```{r}
+modFitRPY <- train(classe ~ roll_belt + pitch_belt + yaw_belt, method = "rf", data = training, ntree = 10)
+predRPY <- predict(modFitRPY, training)
+sum(training$classe == predRPY) / length(predRPY)
+```
+
+#### Using all visibly useful variables on the full training dataset
+At this point, however, I became interested in maximizing in-sample accuracy so I fitted another model using all visibly useful variables from the dataset. This further increased the in-sample accuracy to 99.9%:
+
+```{r}
+modFitMany <- train(classe ~ roll_belt + pitch_belt + yaw_belt + total_accel_belt + gyros_belt_x + 
+						gyros_belt_y + gyros_belt_z + accel_belt_x + accel_belt_y + accel_belt_z + 
+						magnet_belt_x + magnet_belt_y + magnet_belt_z + roll_arm + pitch_arm + yaw_arm + 
+						total_accel_arm + gyros_arm_x + gyros_arm_y +gyros_arm_z + accel_arm_x +  
+						accel_arm_y + accel_arm_z + magnet_arm_x + magnet_arm_y + magnet_arm_z +
+						roll_dumbbell + pitch_dumbbell + yaw_dumbbell + total_accel_dumbbell + 
+						gyros_dumbbell_x + gyros_dumbbell_y + gyros_dumbbell_z + accel_dumbbell_x + 
+						accel_dumbbell_y + accel_dumbbell_z + magnet_dumbbell_x + magnet_dumbbell_y + 
+						magnet_dumbbell_z + roll_forearm + pitch_forearm + yaw_forearm + total_accel_forearm + 
+						gyros_forearm_x + gyros_forearm_y + gyros_forearm_z + accel_forearm_x +
+						accel_forearm_y +accel_forearm_z + magnet_forearm_x + magnet_forearm_y + 
+						magnet_forearm_z, method = "rf", data = training, ntree = 10)
+predMany <- predict(modFitMany, training)
+sum(training$classe == predMany) / length(predMany)
+```
+
+#### Tuning the algorithm: more trees!
+Further tuning the Random Forest algorithm demonstrated that increasing the number of trees significantly had a positive impact on the in-sample accuracy of the model, to 100.0% accuracy:
+```{r}
+modFitMany50 <- train(classe ~ roll_belt + pitch_belt + yaw_belt + total_accel_belt + gyros_belt_x + 
+						gyros_belt_y + gyros_belt_z + accel_belt_x + accel_belt_y + accel_belt_z + 
+						magnet_belt_x + magnet_belt_y + magnet_belt_z + roll_arm + pitch_arm + yaw_arm + 
+						total_accel_arm + gyros_arm_x + gyros_arm_y +gyros_arm_z + accel_arm_x +  
+						accel_arm_y + accel_arm_z + magnet_arm_x + magnet_arm_y + magnet_arm_z +
+						roll_dumbbell + pitch_dumbbell + yaw_dumbbell + total_accel_dumbbell + 
+						gyros_dumbbell_x + gyros_dumbbell_y + gyros_dumbbell_z + accel_dumbbell_x + 
+						accel_dumbbell_y + accel_dumbbell_z + magnet_dumbbell_x + magnet_dumbbell_y + 
+						magnet_dumbbell_z + roll_forearm + pitch_forearm + yaw_forearm + total_accel_forearm + 
+						gyros_forearm_x + gyros_forearm_y + gyros_forearm_z + accel_forearm_x +
+						accel_forearm_y +accel_forearm_z + magnet_forearm_x + magnet_forearm_y + 
+						magnet_forearm_z, method = "rf", data = training, ntree = 50)
+predMany50 <- predict(modFitMany50, training)
+sum(training$classe == predMany50) / length(predMany50)
+table(training$classe, predMany50)
+```
+
+## Cross-validation using the 'Validation' dataset
+To be able to test more accurately the performance of the models, I measured out-of-sample accuracy using the 'Validation' dataset. The accuracy was, of course, lower than the in-sample accuracy, but remained very high - and the model with 50 trees and many variables came out strongest of them all at 98.7% out-of-sample accuracy:
+
+```{r}
+predValMany50 <- predict(modFitMany50, validation)
+sum(validation$classe == predValMany50) / length(predValMany50)
+table(validation$classe, predValMany50)
+```
+
+## Estimating out-of-sample error with the 'Testing' dataset
+Finally, since we had used the 'Validation' dataset to perform cross-validation and define which model to select, I wanted to measure out-of-sample accuracy on an entirely new dataset: the testing dataset. This resulted in an out-of-sample accuracy of 98.8%, even better than the 'Validation' dataset. I believe that this is a good approximation of the out-of-sample accuracy this model will have when presented with entirely new datasets.
+
+```{r}
+predTesting <- predict(modFitMany50, testing)
+sum(testing$classe == predTesting) / length(predTesting)
+table(testing$classe, predTesting)
+```
+
+## Making new predictions
+The final part of the project was to use the fitted model to make predictions on 20 entirely new datapoints and respond to a Quiz. The model performed very well and these predictions were on target 100% of the time (the answers for the Quiz are not shown here to protect the integrity of the Coursera quiz as this file is available online).
+
+```{r}
+predQuiz <- predict(modFitMany50, pmltesting)
+
+# Answers not displayed - uncomment the line below to display them
+# predQuiz
+```
+
+
+
